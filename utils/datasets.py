@@ -24,14 +24,16 @@ def resize_img(cv_img, size=512):
 
     return resized_img
 
-def padding(cv_img, size=512):
+def padding(cv_img, size=512, auto_pad_val=False):
     h, w = cv_img.shape[:2]
     if cv_img.ndim == 3:
         base_shape = (size, size, cv_img.shape[2])
     elif cv_img.ndim == 2:
         base_shape = (size, size)
     
-    padded = np.zeros(base_shape, dtype=np.uint8)
+    pad_val = 0
+    if auto_pad_val: pad_val = np.mean(cv_img)
+    padded = np.zeros(base_shape, dtype=np.uint8) + pad_val
     if h > w:
         pad_edge = (size - w) // 2
         idx = slice(pad_edge, pad_edge+w)
@@ -43,7 +45,7 @@ def padding(cv_img, size=512):
 
     return padded
 
-def _load_raw_data(directory, classes, size):
+def _load_raw_data(directory, classes, size, auto_pad_val):
     data = dict(zip(list(range(len(classes))), [[] for _ in range(len(classes))]))
     id2class = dict(zip(list(range(len(classes))), classes))
     class2id = dict(zip(classes, list(range(len(classes)))))
@@ -57,13 +59,13 @@ def _load_raw_data(directory, classes, size):
                 sys.stderr.write('Cannot read file correctly. : {}\n'.format(img_path))
                 continue
             resized = resize_img(img, size=size)
-            padded = padding(resized, size=size)
+            padded = padding(resized, size=size, auto_pad_val=auto_pad_val)
             padded = np.transpose(padded, (1, 0, 2))
 
             data[class2id[cls_name]] += [padded]  # (H, W, C)
     return data, id2class
 
-def load_data(directory, classes=('Normal', 'Nude', 'Swimwear'), size=512, cache_path=None):
+def load_data(directory, classes=('Normal', 'Nude', 'Swimwear'), size=512, cache_path=None, auto_pad_val=False):
     if type(directory) is str:
         directory = Path(directory)
     
@@ -77,7 +79,7 @@ def load_data(directory, classes=('Normal', 'Nude', 'Swimwear'), size=512, cache
     if cache_path is not None:
         if type(cache_path) is str: cache_path = Path(cache_path)
         if not cache_path.exists():
-            data, id2class = _load_raw_data(directory, classes, size)
+            data, id2class = _load_raw_data(directory, classes, size, auto_pad_val)
 
             with cache_path.open('wb') as fp:
                 pickle.dump((data, id2class), fp, protocol=4)
@@ -85,7 +87,7 @@ def load_data(directory, classes=('Normal', 'Nude', 'Swimwear'), size=512, cache
             with cache_path.open('rb') as fp:
                 data, id2class = pickle.load(fp)
     else:
-        data, id2class = _load_raw_data(directory, classes, size)
+        data, id2class = _load_raw_data(directory, classes, size, auto_pad_val)
     
     x, y = [], []
     for class_id in data.keys():
