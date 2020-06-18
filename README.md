@@ -1,8 +1,8 @@
-# DAIUS
-Does AI understand sexy?
+# CAIUS
+Can AI understand sexy?
 
 ```
-DAIUS + models: モデル定義ファイル群
+CAIUS + models: モデル定義ファイル群
       |
       + utils: ユーティリティ
       |
