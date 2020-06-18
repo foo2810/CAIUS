@@ -37,11 +37,11 @@ def padding(cv_img, size=512, auto_pad_val=False):
     if h > w:
         pad_edge = (size - w) // 2
         idx = slice(pad_edge, pad_edge+w)
-        padded[:, idx, :] += cv_img
+        padded[:, idx, :] += cv_img - pad_val
     else:
         pad_edge = (size - h) // 2
         idx = slice(pad_edge, pad_edge+h)
-        padded[idx, :, :] += cv_img
+        padded[idx, :, :] += cv_img - pad_val
 
     return padded
 
