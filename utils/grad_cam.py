@@ -6,69 +6,48 @@ import tensorflow as tf
 
 tfk = tf.keras
 
-# def get_grad_cam(model, convLayerIdx, x, width, height):
-#     # rescale
-#     rescaledX = x
-#     pred = model.predict(rescaledX)
-#     classIdx = np.argmax(pred, axis=1)
-    
-#     relu = np.vectorize(lambda x: max(0., x))
-
-#     jetCmapList = []
-#     for idx, (iX, ci) in enumerate(zip(rescaledX, classIdx)):
-#         classOutput = model.layers[-1].output[:, ci]
-#         convOutput = model.layers[convLayerIdx].output
-
-#         grads = K.gradients(classOutput, convOutput)[0]
-#         getGrad = K.function([model.layers[0].input, K.learning_phase()], [convOutput, grads])
-
-#         iX = iX[np.newaxis, :, :, :]
-
-#         # learning_phase    0: test, 1: train
-#         output, gradients = getGrad([iX, 0])
-#         output, gradients = output[0], gradients[0]
-
-#         alpha = np.mean(gradients, axis=(0, 1))
-#         gcmap = np.dot(output, alpha)  # output, alphaの順ならOK
-#         gcmap = relu(gcmap)
-#         gcmap /= np.max(gcmap)
-
-#         resizedCmap = cv2.resize(gcmap, (width, height), cv2.INTER_LINEAR)
-#         jetCmap = cv2.applyColorMap(np.uint8(255 * resizedCmap), cv2.COLORMAP_JET)
-#         jetCmap = cv2.cvtColor(jetCmap, cv2.COLOR_BGR2RGB)
-
-#         jetCmapList.append(jetCmap)
-
-#     return jetCmapList, classIdx
-
-
-
 @tf.function
-def _f(model, inputs, labels, loss_fn, final_conv_idx)
-    intermediate = model.get_layer(index=final_conv_idx)
-    tmp_model = tfk.Model(model.input, outputs=[model.output, intermediate])
+def _f(model, inputs, label, loss_fn, final_conv_idx):
     with tf.GradientTape() as tape:
-        # output = model.layers[-1].output
-        pred, conv_out = tmp_model(inputs)
-        # conv_output = model.get_layer(index=final_conv_idx)(x)
-        loss_val = loss_fn(labels, pred)
-
-        grads = tape.gradient(loss_val, tmp_model.trainable_variables)
+        # pred = model(inputs)
+        pred, conv_out = model(inputs)
+        # loss_val = loss_fn(labels, pred)
+        # grads = tape.gradient(loss_val, conv_out)
+        grads = tape.gradient(pred[:, label], conv_out)
         final_conv_grad = grads[final_conv_idx]
+    del tape
     
-    return pred, final_conv_grad
+    # conv_out = model.layers[final_conv_idx](inputs)
+    
+    return pred, conv_out, final_conv_grad
     
 
-def get_grad_cam(model, inputs, labels, loss_fn, final_conv_idx):
-    pred, final_conv_grad = _f(model, inputs, labels, loss_fn, final_conv_grad)
-    pred, final_conv_grad = pred.numpy(), final_conv_grad.numpy()
+def get_grad_cam(model, inputs, label, loss_fn, final_conv_idx):
+    # if final_conv_idx < 0:
+    #     final_conv_idx += len(model.layers)
+    h = model.layers[final_conv_idx].output
+
+    tmp_model = tfk.Model(model.inputs, [model.output, h])
+    pred, conv_out, final_conv_grad = _f(tmp_model, inputs, label, loss_fn, final_conv_idx)
+    pred, conv_out, final_conv_grad = tf.cast(pred, tf.float32), tf.cast(conv_out, tf.float32), tf.cast(final_conv_grad, tf.float32)
+    pred, conv_out, final_conv_grad = pred.numpy(), conv_out.numpy(), final_conv_grad.numpy()
 
     cam_list = []
     relu = np.vectorize(lambda x: max(0, x))
-    width, height = inputs.shape[:2]
-    for out, grad in zip(pred, final_conv_grad):
-        alpha = np.mean(grad, axis=(0, 1))
-        gcam = np.dot(out, alpha)  # output, alphaの順ならOK
+    width, height = inputs.shape[1:3]
+    for out, c_out in zip(pred, conv_out):
+        # alpha = tf.reduce_mean(final_conv_grad, axis=(0, 1))
+        # gcam = tf.tensordot(c_out, alpha, axes=[2, 0])
+        # gcam = tfk.activations.relu(gcam)
+        # if tf.reduce_min(gcam) == tf.zeros([]) and tf.reduce_max(gcam) == tf.zeros([]):
+        #     gcam *= tf.constant(0, dtype=tf.float32)
+        # else:
+        #     gcam = (gcam - tf.reduce_min(gcam)) / (tf.reduce_max(gcam) - tf.reduce_min(gcam))
+        # gcam = tf.transpose(gcam, perm=[1, 0])
+
+        alpha = np.mean(final_conv_grad, axis=(0, 1))
+        gcam = np.dot(c_out, alpha)  # output, alphaの順ならOK
+        gcam += 0.5
         gcam = relu(gcam)
         if np.min(gcam) == 0 and np.max(gcam) == 0:
             gcam[...] = 0
@@ -77,7 +56,11 @@ def get_grad_cam(model, inputs, labels, loss_fn, final_conv_idx):
 
         # opencvではshapeが(height, width, ch)として扱われる
         # cv2.resize(img, (width, height), fileter)
-        resized_gcam = cv2.resize(gcam, (width, height), cv2.INTER_LINEAR)
+ 
+        # gcam = np.transpose(gcam, (1, 0, 2))[..., 0]
+        # resized_gcam = cv2.resize(gcam, (width, height), cv2.INTER_LINEAR)
+
+        resized_gcam = gcam
         cam_list.append(resized_gcam)
 
     return cam_list
