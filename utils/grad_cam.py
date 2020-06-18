@@ -63,5 +63,5 @@ def get_grad_cam(model, inputs, label, loss_fn, final_conv_idx):
         resized_gcam = gcam
         cam_list.append(resized_gcam)
 
-    return cam_list
+    return cam_list, pred
 
