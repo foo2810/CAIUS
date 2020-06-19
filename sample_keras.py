@@ -10,6 +10,7 @@ from models.wrapper import VGG16
 
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import ModelCheckpoint
 
 # Params
 batch_size = 64
@@ -40,5 +41,8 @@ model = VGG16(weights=None, classes=3, input_shape=(256, 256, 3))
 # Training
 model.compile(optimizer=Adam(lr), loss="categorical_crossentropy", metrics=["Accuracy"])
 
+checkpoint = ModelCheckpoint("best_param.hdf5", monitor="val_acc", verbose=1,
+                             save_best_only=True, save_weights_only=True)
+
 stack = model.fit(x=x_train, y=y_train, batch_size=batch_size, epochs=n_epochs,
-                  validation_data=(x_test, y_test), verbose=1)
+                  validation_data=(x_test, y_test), verbose=1, callbacks=[checkpoint])
