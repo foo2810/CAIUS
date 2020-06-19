@@ -60,9 +60,9 @@ def _load_raw_data(directory, classes, size, auto_pad_val):
                 continue
             resized = resize_img(img, size=size)
             padded = padding(resized, size=size, auto_pad_val=auto_pad_val)
-            padded = np.transpose(padded, (1, 0, 2))
+            padded = cv2.cvtColor(np.uint8(padded), cv2.COLOR_BGR2RGB).astype(np.float32)
 
-            data[class2id[cls_name]] += [padded]  # (H, W, C)
+            data[class2id[cls_name]] += [padded]  # (W, H, C)
     return data, id2class
 
 def load_data(directory, classes=('Normal', 'Nude', 'Swimwear'), size=512, cache_path=None, auto_pad_val=False):
