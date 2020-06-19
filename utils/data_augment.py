@@ -7,6 +7,12 @@ def normalize_image(image, label):
     image /= tf.constant(255., dtype=tf.float32)
     return image, label
 
+def random_flip_left_right(image, label):
+    return tf.image.random_flip_left_right(image)
+
+def random_flip_up_down(image, label):
+    return tf.image.random_flip_up_down(image)
+
 if __name__ == '__main__':
     import numpy as np
     import matplotlib.pyplot as plt
