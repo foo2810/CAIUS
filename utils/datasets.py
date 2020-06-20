@@ -61,6 +61,7 @@ def _load_raw_data(directory, classes, size, auto_pad_val):
             resized = resize_img(img, size=size)
             padded = padding(resized, size=size, auto_pad_val=auto_pad_val)
             padded = cv2.cvtColor(np.uint8(padded), cv2.COLOR_BGR2RGB).astype(np.float32)
+            padded = padded / 255.
 
             data[class2id[cls_name]] += [padded]  # (W, H, C)
     return data, id2class
