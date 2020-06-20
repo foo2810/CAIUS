@@ -44,7 +44,7 @@ def DenseNet121(**kwargs):
 def DenseNet169(**kwargs):
     return tfk.applications.DenseNet121(**kwargs)
 
-def DenseNet1201(**kwargs):
+def DenseNet201(**kwargs):
     return tfk.applications.DenseNet121(**kwargs)
 
 # EfficientNet
