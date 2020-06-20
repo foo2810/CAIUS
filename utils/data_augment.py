@@ -8,10 +8,10 @@ def normalize_image(image, label):
     return image, label
 
 def random_flip_left_right(image, label):
-    return tf.image.random_flip_left_right(image)
+    return tf.image.random_flip_left_right(image), label
 
 def random_flip_up_down(image, label):
-    return tf.image.random_flip_up_down(image)
+    return tf.image.random_flip_up_down(image), label
 
 def random_rotate_90(image, label):
     m = tf.random.uniform([], 0, 3, dtype=tf.int32)
@@ -61,8 +61,11 @@ if __name__ == '__main__':
 
     _random_cutout = gen_random_cutout(42)
 
+    @tf.function
     def augment(image, label):
         # image, label = normalize_image(image, label)
+        image, label = random_flip_left_right(image, label)
+        image, label = random_flip_up_down(image, label)
         image, label =_random_cutout(image, label)
         image, label = random_rotate_90(image, label)
         return image, label
@@ -71,7 +74,7 @@ if __name__ == '__main__':
     n_data = len(x)
     ds = tf.data.Dataset.from_tensor_slices((x, y)) \
         .shuffle(n_data).map(augment, num_parallel_calls=tf.data.experimental.AUTOTUNE) \
-        .batch(100).prefetch(tf.data.experimental.AUTOTUNE).repeat(3)
+        .batch(64).prefetch(tf.data.experimental.AUTOTUNE).repeat(3)
     
     cnt = 0
     for inputs, labels in ds:
