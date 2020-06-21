@@ -82,6 +82,9 @@ def load_data(directory, classes=('Normal', 'Nude', 'Swimwear'), size=512, cache
         if not cache_path.exists():
             data, id2class = _load_raw_data(directory, classes, size, auto_pad_val)
 
+            if not cache_path.parent.exists():
+                cache_path.parent.mkdir(parents=True)
+
             with cache_path.open('wb') as fp:
                 pickle.dump((data, id2class), fp, protocol=4)
         else:
