@@ -10,3 +10,7 @@ CAIUS + models: モデル定義ファイル群
 ```
 
 Grad-CAMはたぶんまだ動かない
+
+## Requirements
+Tensorflow >= 2.0
+OpenCV
