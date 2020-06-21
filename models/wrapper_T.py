@@ -11,6 +11,8 @@ __all__ = [
     'ResNet50', 'ResNet101', 'ResNet152', 'ResNet50V2', 'ResNet101V2', 'ResNet152V2',
     'DenseNet121', 'DenseNet169', 'DenseNet201',
     'InceptionResNetV2',
+    'EfficientNetB0', 'EfficientNetB1', 'EfficientNetB2', 'EfficientNetB3',
+    'EfficientNetB4', 'EfficientNetB5', 'EfficientNetB6', 'EfficientNetB7'
 ]
 
 def _create_transfer_model(base, classifier):
