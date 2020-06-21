@@ -79,25 +79,23 @@ print('y_test: {}'.format(y_test.shape))
 # y_train = to_categorical(y_train, num_classes=3)
 # y_test = to_categorical(y_test, num_classes=3)
 
-for i in range(0, 3):
+# Model
+model = VGG16(weights=None, classes=3, input_shape=(128, 128, 3))
+# model = TransferVGG16(classes=3, input_shape=(128, 128, 3))
+# model.layers[0].trainable = False
 
-    # Model
-    model = VGG16(weights=None, classes=3, input_shape=(128, 128, 3))
-    # model = TransferVGG16(classes=3, input_shape=(128, 128, 3))
-    # model.layers[0].trainable = False
+# Training
+model.compile(optimizer=Adam(lr), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
 
-    # Training
-    model.compile(optimizer=Adam(lr), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+checkpoint = ModelCheckpoint("weights/vgg16_best_param.hdf5", monitor="val_accuracy", verbose=1,
+                             save_best_only=True, save_weights_only=True)
 
-    checkpoint = ModelCheckpoint("weights/vgg16_best_param.hdf5", monitor="val_accuracy", verbose=1,
-                                 save_best_only=True, save_weights_only=True)
+# stack = model.fit(x=x_train, y=y_train, batch_size=batch_size, epochs=n_epochs, validation_data=(x_test, y_test),
+#                   verbose=1, callbacks=[checkpoint])
 
-    # stack = model.fit(x=x_train, y=y_train, batch_size=batch_size, epochs=n_epochs, validation_data=(x_test, y_test),
-    #                   verbose=1, callbacks=[checkpoint])
+stack = model.fit(train_ds, epochs=n_epochs,
+                  validation_data=test_ds, verbose=1, callbacks=[checkpoint])
 
-    stack = model.fit(train_ds, epochs=n_epochs,
-                      validation_data=test_ds, verbose=1, callbacks=[checkpoint])
-
-    score = model.evaluate(test_ds)
-    print('Val Accuracy: {}'.format(score[1]))
-    print('Val Loss: {}'.format(score[0]))
+score = model.evaluate(test_ds)
+print('Val Accuracy: {}'.format(score[1]))
+print('Val Loss: {}'.format(score[0]))
