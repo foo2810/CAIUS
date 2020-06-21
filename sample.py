@@ -11,6 +11,7 @@ import pandas as pd
 
 from utils.datasets import load_data, train_test_split
 from utils.train import training
+from utils.data_augment import random_flip_left_right, random_rotate_90, gen_random_cutout
 from utils.common import time_counter
 
 from models.simple import SimpleCNN
@@ -31,7 +32,19 @@ with time_counter():
     x, y, _ = load_data('data/dataset/', classes=['normal', 'nude', 'swimwear'], size=128, cache_path='data/data_cache/dataset_size128_autopad.pkl', auto_pad_val=True)
     x_train, x_test, y_train, y_test = train_test_split(x, y, train_rate=0.5)
     n_train = len(x_train)
-    train_ds = tf.data.Dataset.from_tensor_slices((x_train, y_train)).shuffle(n_train).batch(batch_size)
+
+    _random_cutout = gen_random_cutout(42)
+    @tf.function
+    def augment(image, label):
+        image, label = random_flip_left_right(image, label)
+        # image, label = random_flip_up_down(image, label)
+        image, label =_random_cutout(image, label)
+        image, label = random_rotate_90(image, label)
+        return image, label
+
+    train_ds = tf.data.Dataset.from_tensor_slices((x_train, y_train)) \
+        .shuffle(n_train).map(augment) \
+        .batch(batch_size).repeat(3)    # datasetのサイズを3倍に
     test_ds = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(batch_size)
 print('x_train: {}'.format(x_train.shape))
 print('y_train: {}'.format(y_train.shape))
