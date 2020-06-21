@@ -3,7 +3,7 @@ import numpy as np
 
 tfk = tf.keras
 
-def training(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, output_best_weights=True, train_weights=None):
+def training(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, output_best_weights=True, weight_name=None, train_weights=None):
     ## Metrics
     train_loss = tf.metrics.Mean(name='train_loss')
     test_loss = tf.metrics.Mean(name='test_loss')
@@ -56,7 +56,9 @@ def training(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, ou
         
         if output_best_weights and  best_acc < test_acc.result().numpy():
             best_acc = test_acc.result().numpy()
-            model.save_weights('best_param', save_format='tf')
+            if weight_name is None:
+                weight_name = 'best_param'
+            model.save_weights(weight_name, save_format='tf')
         
         print(template.format(
             epoch+1, n_epochs,
@@ -91,7 +93,7 @@ def _mixup(inputs, onehot_labels, alpha):
 
 
 # loss: Sparse...は指定できない
-def training_mixup(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, alpha, output_best_weights=True, train_weights=None):
+def training_mixup(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, alpha, output_best_weights=True, weight_name=None, train_weights=None):
     ## Metrics
     train_loss = tf.metrics.Mean(name='train_loss')
     test_loss = tf.metrics.Mean(name='test_loss')
@@ -154,7 +156,9 @@ def training_mixup(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_si
         
         if output_best_weights and  best_acc < test_acc.result().numpy():
             best_acc = test_acc.result().numpy()
-            model.save_weights('best_param', save_format='tf')
+            if weight_name is None:
+                weight_name = 'best_param'
+            model.save_weights(weight_name, save_format='tf')
         
         print(template.format(
             epoch+1, n_epochs,
