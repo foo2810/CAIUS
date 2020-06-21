@@ -21,6 +21,9 @@ def random_rotate_90(image, label):
 
 def gen_random_cutout(mask_size):
     def _random_cutout(image, label):
+        if tf.random.uniform([]) < 0.5:
+            return image, label
+
         mask_value = tf.reduce_mean(image)
 
         h, w, c = image.shape
