@@ -1,6 +1,7 @@
 # 転移学習・FT 
 
 import tensorflow as tf
+import models
 
 tfk = tf.keras
 
@@ -147,9 +148,68 @@ def DenseNet201(input_shape, classes=3, classifier_activation='softmax', classif
 
 # EfficientNet
 
-def EfficientNetB0(input_shape, classes=3, classifier_activation='softmax', classifier=None):
-    ...
+def EfficientNetBx(model_arch, input_shape, classes=3, classifier_activation='softmax', classifier=None, **kwargs):
+    base = model_arch(include_top=False, weights='imagenet', classes=classes, input_shape=input_shape, **kwargs)
+    dropout_rate = kwargs['dropout_rate']
+    if classifier is None:
+        classifier = tfk.Sequential()
+        classifier.add(tfk.layers.GlobalAveragePooling2D(name='avg_pool'))
+        if dropout_rate and dropout_rate > 0:
+            classifier.add(tfk.layers.Dropout(dropout_rate, name='top_dropout'))
+        classifier.add(tfk.layers.Dense(classes,
+                       activation='softmax',
+                       kernel_initializer=models.efficientnet.model.DENSE_KERNEL_INITIALIZER,
+                       name='probs'))
+    return _create_transfer_model(base, classifier)
 
+def EfficientNetB0(input_shape, classes=3, classifier_activation='softmax', classifier=None, **kwargs):
+    return EfficientNetBx(
+        models.efficientnet.tfkeras.EfficientNetB0,
+        input_shape, classes, classifier_activation, classifier, **kwargs
+    )
+
+def EfficientNetB1(input_shape, classes=3, classifier_activation='softmax', classifier=None, **kwargs):
+    return EfficientNetBx(
+        models.efficientnet.tfkeras.EfficientNetB1,
+        input_shape, classes, classifier_activation, classifier, **kwargs
+    )
+
+def EfficientNetB2(input_shape, classes=3, classifier_activation='softmax', classifier=None, **kwargs):
+    return EfficientNetBx(
+        models.efficientnet.tfkeras.EfficientNetB2,
+        input_shape, classes, classifier_activation, classifier, **kwargs
+    )
+def EfficientNetB3(input_shape, classes=3, classifier_activation='softmax', classifier=None, **kwargs):
+    return EfficientNetBx(
+        models.efficientnet.tfkeras.EfficientNetB3,
+        input_shape, classes, classifier_activation, classifier, **kwargs
+    )
+
+def EfficientNetB4(input_shape, classes=3, classifier_activation='softmax', classifier=None, **kwargs):
+    return EfficientNetBx(
+        models.efficientnet.tfkeras.EfficientNetB4,
+        input_shape, classes, classifier_activation, classifier, **kwargs
+    )
+
+def EfficientNetB5(input_shape, classes=3, classifier_activation='softmax', classifier=None, **kwargs):
+    return EfficientNetBx(
+        models.efficientnet.tfkeras.EfficientNetB5,
+        input_shape, classes, classifier_activation, classifier, **kwargs
+    )
+
+def EfficientNetB6(input_shape, classes=3, classifier_activation='softmax', classifier=None, **kwargs):
+    return EfficientNetBx(
+        models.efficientnet.tfkeras.EfficientNetB6,
+        input_shape, classes, classifier_activation, classifier, **kwargs
+    )
+
+def EfficientNetB7(input_shape, classes=3, classifier_activation='softmax', classifier=None, **kwargs):
+    return EfficientNetBx(
+        models.efficientnet.tfkeras.EfficientNetB7,
+        input_shape, classes, classifier_activation, classifier, **kwargs
+    )
+  
+ 
 # Mixed
 
 def InceptionResNetV2(input_shape, classes=3, classifier_activation='softmax', classifier=None):
