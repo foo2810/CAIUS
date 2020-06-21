@@ -53,7 +53,7 @@ in_shape = x_train.shape[1:]
 del x_train, y_train, x_test, y_test
 
 def get_optimizer(trial):
-    lr = trial.suggest_loguniform('adam_lr', 1e-6, 1e-4)
+    lr = trial.suggest_loguniform('adam_lr', 1e-5, 1e-2)
     optimizer =  tf.optimizers.Adam(lr)
     return optimizer
 
