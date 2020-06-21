@@ -1,19 +1,20 @@
 import sys
 sys.path.append('./')
 
+# tensorflow messageの抑制
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 import tensorflow as tf
 import numpy as np
 import pandas as pd
 
 from utils.datasets import load_data, train_test_split
+from utils.train import training
 from utils.common import time_counter
 
 from models.simple import SimpleCNN
 from models.wrapper import VGG16, ResNet50
-
-# tensorflow messageの抑制
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 tfk = tf.keras
 tfk.backend.set_floatx('float32')
@@ -74,7 +75,7 @@ def encoder_net():
 	inputs = tfk.Input((128, 128, 3))
 	normalization_layer = UnitNormLayer()
 
-	encoder = tfk.applications.ResNet50(weights=None, include_top=False)
+	encoder = ResNet50(weights=None, include_top=False)
 	encoder.trainable = True
 
 	embeddings = encoder(inputs, training=True)
@@ -97,10 +98,6 @@ def projector_net():
 # Training the encoder and the projector
 
 # SGD with lr decay function
-decay_steps = 1000
-# lr_decayed_fn = tfk.experimental.CosineDecay(
-#     initial_learning_rate=0.001, decay_steps=decay_steps)
-# optimizer = tfk.optimizers.RMSprop(lr_decayed_fn)
 optimizer = tfk.optimizers.Adam(learning_rate=1e-3)
 
 encoder_r = encoder_net()
@@ -240,7 +237,7 @@ def train_step(images, labels):
 
 	return loss
 
-EPOCHS = 10
+EPOCHS = 15
 LOG_EVERY = 1
 train_loss_results = []
 
@@ -253,7 +250,7 @@ for epoch in range(EPOCHS):
 		epoch_loss_avg.update_state(loss) 
 
 	train_loss_results.append(epoch_loss_avg.result())
-# 	print({"supervised_contrastive_loss": epoch_loss_avg.result()})
+	# print({"supervised_contrastive_loss": epoch_loss_avg.result()})
 
 	if epoch % LOG_EVERY == 0:
 		print("Epoch: {} Loss: {:.3f}".format(epoch, epoch_loss_avg.result()))
@@ -291,115 +288,16 @@ def supervised_model():
 	return supervised_model
 
 model = supervised_model()
-# supervised_classifier = supervised_model()
 
 
-# optimizer2 = tfk.optimizers.Adam(learning_rate=1e-3)
-# supervised_classifier.compile(optimizer=optimizer2,
-# 	loss=tfk.losses.SparseCategoricalCrossentropy(),
-# 	metrics=[tfk.metrics.SparseCategoricalAccuracy()])
-
-# es = tfk.callbacks.EarlyStopping(monitor="val_sparse_categorical_accuracy", patience=2,
-# 	restore_best_weights=True, verbose=2)
-
-
-# start = time.time()
-# hist = supervised_classifier.fit(train_ds, validation_data=test_ds, epochs=100,
-#     callbacks=[es])
-# end = time.time()
-# print({"training_time": end - start})
-
-# import matplotlib.pyplot as plt
-# def plothist(history):
-#     #plt.plot(history.history['val_loss'])
-#     fig, ax1 = plt.subplots()
-#     # plt.yscale("log")
-#     # plt.ylim(0, 10)
-#     ax1.plot(history.history['loss'], color='blue', label='loss')
-#     ax1.plot(history.history['val_loss'], color='blue', linestyle='dashed', label='val_loss')
-#     ax1.legend(loc="lower left")
-#     ax2 = ax1.twinx()
-#     # plt.yscale("log")
-#     plt.ylim(0,1)
-#     ax2.plot(history.history['sparse_categorical_accuracy'], color="red", label='acc')
-#     ax2.plot(history.history['val_sparse_categorical_accuracy'], color="red", linestyle='dashed', label='val_acc')
-#     ax2.legend(loc="upper left")
-#     plt.show()
-# plothist(hist)
-
-# sys.exit()
-
-
-
-# Training
-
-## Metrics
-train_loss = tf.metrics.Mean(name='train_loss')
-test_loss = tf.metrics.Mean(name='test_loss')
-train_acc = tf.metrics.SparseCategoricalAccuracy(name='train_acc')
-test_acc = tf.metrics.SparseCategoricalAccuracy(name='test_acc')
-
-## Loss
+# Loss
 loss = tfk.losses.SparseCategoricalCrossentropy()
 
-## Optimizer
+# Optimizer
 opt = tfk.optimizers.Adam(lr=lr)
 
-@tf.function
-def train_step(model, inputs, labels):
-    with tf.GradientTape() as tape:
-        pred = model(inputs)
-        loss_val = loss(labels, pred)
-    grads = tape.gradient(loss_val, model.trainable_variables)
-    opt.apply_gradients(zip(grads, model.trainable_variables))
-
-    train_loss(loss_val)
-    train_acc(labels, pred)
-
-@tf.function
-def test_step(model, inputs, labels):
-    pred = model(inputs)
-    loss_val = loss(labels, pred)
-    test_loss(loss_val)
-    test_acc(labels, pred)
-
-hist = {
-    'train_loss': [],
-    'test_loss': [],
-    'train_acc': [],
-    'test_acc': [],
-}
-template = 'Epoch[{}/{}] loss: {:.3f}, acc: {:.3f}, test_loss: {:.3f}, test_acc: {:.3f}'
-best_acc = 0
-for epoch in range(n_epochs):
-    for inputs, labels in train_ds:
-        train_step(model, inputs, labels)
-    
-    for inputs, labels in test_ds:
-        test_step(model, inputs, labels)
-    
-    if best_acc < test_acc.result().numpy():
-        best_acc = test_acc.result().numpy()
-        weights_file_path = str(result_path / 'best_param')
-        model.save_weights(weights_file_path, save_format='tf')
-    
-    print(template.format(
-        epoch+1, n_epochs,
-        train_loss.result().numpy(),
-        train_acc.result().numpy(),
-        test_loss.result().numpy(),
-        test_acc.result().numpy(),
-    ))
-
-    hist['train_loss'] += [train_loss.result().numpy()]
-    hist['test_loss'] += [test_loss.result().numpy()]
-    hist['train_acc'] += [train_acc.result().numpy()]
-    hist['test_acc'] += [test_acc.result().numpy()]
-    
-    train_loss.reset_states()
-    test_loss.reset_states()
-    train_acc.reset_states()
-    test_acc.reset_states()
+# Training
+hist = training(model, train_ds, test_ds, loss, opt, n_epochs, batch_size, weight_name=str(result_path / 'best_param'))
 
 hist_file_path = str(result_path / 'history.csv')
 pd.DataFrame(hist).to_csv(hist_file_path)
