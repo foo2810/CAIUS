@@ -53,12 +53,12 @@ in_shape = x_train.shape[1:]
 del x_train, y_train, x_test, y_test
 
 def get_optimizer(trial):
-    lr = trial.suggest_loguniform('adam_lr', 1e-5, 1e-2)
+    lr = trial.suggest_loguniform('adam_lr', 1e-6, 1e-4)
     optimizer =  tf.optimizers.Adam(lr)
     return optimizer
 
 def get_alpha(trial):
-    alpha = trial.suggest_uniform('alpha_mixup', 0.1, 1.0)
+    alpha = trial.suggest_uniform('alpha_mixup', 0.1, 0.4)
     return alpha
 
 def objective(trial):
@@ -74,7 +74,7 @@ def objective(trial):
     return 1 - test_acc.max()
 
 
-trial_size = 20
+trial_size = 5
 study = optuna.create_study()
 study.optimize(objective, n_trials=trial_size)
 
