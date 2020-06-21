@@ -66,7 +66,7 @@ class ComplementEntropy(tfk.losses.Loss):
         return loss
 
 
-
+# for Supervised-Contrastive-Learning
 # https://github.com/tensorflow/addons/blob/master/tensorflow_addons/losses/contrastive.py
 from typing import Union, List
 import numpy as np
@@ -192,3 +192,20 @@ class SupConLoss(tfk.losses.Loss):
         d_y = self.__square_to_vec(D_y)
         y_contrasts = tf.cast(d_y == 0, tf.int32)
         return y_contrasts
+
+# for SimCLR
+# https://github.com/sthalles/SimCLR-tensorflow/blob/master/utils/losses.py
+def _dot_simililarity_dim1(x, y):
+    # x shape: (N, 1, C)
+    # y shape: (N, C, 1)
+    # v shape: (N, 1, 1)
+    v = tf.matmul(tf.expand_dims(x, 1), tf.expand_dims(y, 2))
+    return v
+
+
+def _dot_simililarity_dim2(x, y):
+    v = tf.tensordot(tf.expand_dims(x, 1), tf.expand_dims(tf.transpose(y), 0), axes=2)
+    # x shape: (N, 1, C)
+    # y shape: (1, C, 2N)
+    # v shape: (N, 2N)
+    return v
