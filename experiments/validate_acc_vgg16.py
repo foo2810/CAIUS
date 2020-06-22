@@ -68,8 +68,8 @@ del x_train, y_train, x_test, y_test
 
 models_and_params = {
     'vgg16': (models.wrapper.VGG16(weights=None, classes=3, input_shape=in_shape), 6.33e-5, 0.129, False),
-    'vgg16_pretrained': (models.wrapper_T.VGG16(classes=3, input_shape=in_shape), 1.51e-5, 0.241, True),
-    'vgg16_ft': (models.wrapper_T.VGG16(classes=3, input_shape=in_shape), 1e-5, 0.2, False),
+    'vgg16_pretrained': (models.wrapper_T.VGG16(classes=3, input_shape=in_shape), 5.66e-5, 0.121, True),
+    'vgg16_ft': (models.wrapper_T.VGG16(classes=3, input_shape=in_shape), 1.51e-5, 0.241, False),
 }
 
 # Loss
