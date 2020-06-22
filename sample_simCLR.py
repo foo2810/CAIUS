@@ -235,7 +235,7 @@ def training_SimCLR_Encoder(encoder_model=None, train_ds=None, optimizer=None, n
     hist = {"'nt_xentloss'": epoch_wise_loss}
     return simclr_model, hist
 
-simclr_model, hist = training_SimCLR_Encoder(train_ds=train_ds, n_epochs=5 *0)
+simclr_model, hist = training_SimCLR_Encoder(train_ds=train_ds, n_epochs=5)
 
 hist_file_path = str(result_path / 'nt_xentloss.csv')
 pd.DataFrame(hist).to_csv(hist_file_path)
@@ -245,45 +245,31 @@ pd.DataFrame(hist).to_csv(hist_file_path)
 # Fine-tuning
 # =============================================================================
 
+# model
 num_classes = 3 # TODO Output size
-def get_linear_model(features):
-    linear_model = tfk.Sequential([tfk.layers.Dense(num_classes, input_shape=(features, ), activation="softmax")])
-    return linear_model
+def supervised_model(projection: tfk.Model):
+	inputs = tfk.Input((128, 128, 3))
+	projection.trainable = False
+
+	r = projection(inputs, training=False)
+	outputs = tfk.layers.Dense(num_classes, activation='softmax')(r)
+
+	supervised_model = tfk.Model(inputs, outputs)
+  
+	return supervised_model
 
 # Encoder model with non-linear projections
 projection = tfk.Model(simclr_model.input, simclr_model.layers[-2].output)
+linear_model = supervised_model(projection)
 
-# create Dataset for Fine-tuning
-train = list(train_ds.unbatch().as_numpy_iterator())
-X_train, y_train = map(list, zip(*train))
-X_train, y_train = np.array(X_train)[:500], np.array(y_train)[:500]
-
-test = list(test_ds.unbatch().as_numpy_iterator())
-X_test, y_test = map(list, zip(*test))
-X_test, y_test = np.array(X_test)[:500], np.array(y_test)[:500]
-
-print(X_train.shape, y_train.shape)
-print(X_test.shape, y_test.shape)
-
-# Extract train and test features
-train_features = projection.predict(X_train)
-test_features = projection.predict(X_test)
-
-print(train_features.shape, test_features.shape)
-
-
-# model
-linear_model = get_linear_model(train_features.shape[1])
-
-# create Dataset for Fine-tuning
-n_train = len(train_features)
-train_ds = tf.data.Dataset.from_tensor_slices((train_features, y_train)).shuffle(n_train).batch(batch_size)
-test_ds = tf.data.Dataset.from_tensor_slices((test_features, y_test)).batch(batch_size)
-
+# Loss
 loss = tfk.losses.SparseCategoricalCrossentropy()
+
+# Optimizer
 opt = tfk.optimizers.Adam(lr=lr)
 
-hist = training(linear_model, train_ds, test_ds, loss, opt, n_epochs, batch_size, weight_name=str(result_path / 'best_param'))
+# Training
+hist = training(linear_model, train_ds.take(5), test_ds, loss, opt, n_epochs, batch_size, weight_name=str(result_path / 'best_param'))
 
 hist_file_path = str(result_path / 'history.csv')
 pd.DataFrame(hist).to_csv(hist_file_path)
