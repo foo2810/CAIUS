@@ -14,12 +14,11 @@ def _f(model, inputs, label, loss_fn, final_conv_idx):
         # loss_val = loss_fn(labels, pred)
         # grads = tape.gradient(loss_val, conv_out)
         grads = tape.gradient(pred[:, label], conv_out)
-        final_conv_grad = grads[final_conv_idx]
     del tape
     
     # conv_out = model.layers[final_conv_idx](inputs)
     
-    return pred, conv_out, final_conv_grad
+    return pred, conv_out, grads
     
 
 def get_grad_cam(model, inputs, label, loss_fn, final_conv_idx):
@@ -33,9 +32,8 @@ def get_grad_cam(model, inputs, label, loss_fn, final_conv_idx):
     pred, conv_out, final_conv_grad = pred.numpy(), conv_out.numpy(), final_conv_grad.numpy()
 
     cam_list = []
-    relu = np.vectorize(lambda x: max(0, x))
     width, height = inputs.shape[1:3]
-    for out, c_out in zip(pred, conv_out):
+    for out, c_out, c_grad in zip(pred, conv_out, final_conv_grad):
         # alpha = tf.reduce_mean(final_conv_grad, axis=(0, 1))
         # gcam = tf.tensordot(c_out, alpha, axes=[2, 0])
         # gcam = tfk.activations.relu(gcam)
@@ -45,10 +43,63 @@ def get_grad_cam(model, inputs, label, loss_fn, final_conv_idx):
         #     gcam = (gcam - tf.reduce_min(gcam)) / (tf.reduce_max(gcam) - tf.reduce_min(gcam))
         # gcam = tf.transpose(gcam, perm=[1, 0])
 
-        alpha = np.mean(final_conv_grad, axis=(0, 1))
+        alpha = np.mean(c_grad, axis=(0, 1))
         gcam = np.dot(c_out, alpha)  # output, alphaの順ならOK
         gcam += 0.5
-        gcam = relu(gcam)
+        gcam = np.maximum(gcam, 0)
+        if np.min(gcam) == 0 and np.max(gcam) == 0:
+            gcam[...] = 0
+        else:
+            gcam = (gcam - np.min(gcam)) / (np.max(gcam) - np.min(gcam))
+
+        # opencvではshapeが(height, width, ch)として扱われる
+        # cv2.resize(img, (width, height), fileter)
+ 
+        # gcam = np.transpose(gcam, (1, 0, 2))[..., 0]
+        # resized_gcam = cv2.resize(gcam, (width, height), cv2.INTER_LINEAR)
+
+        resized_gcam = gcam
+        cam_list.append(resized_gcam)
+
+    return cam_list, pred
+
+def get_grad_cam_plusplus(model, inputs, label, loss_fn, conv_idx):
+    h = model.layers[conv_idx].output
+
+    tmp_model = tfk.Model(model.inputs, [model.output, h])
+    pred, conv_out, conv_grad = _f(tmp_model, inputs, label, loss_fn, conv_idx)
+    pred, conv_out, conv_grad = tf.cast(pred, tf.float32), tf.cast(conv_out, tf.float32), tf.cast(conv_grad, tf.float32)
+    pred, conv_out, conv_grad = pred.numpy(), conv_out.numpy(), conv_grad.numpy()
+
+    cam_list = []
+    width, height = inputs.shape[1:3]
+    for out, c_out, c_grad in zip(pred, conv_out, conv_grad):
+        y_c = out[label]
+
+        conv_grad_first = np.exp(y_c) * c_grad
+        conv_grad_second = np.exp(y_c) * c_grad * c_grad
+        conv_grad_third = np.exp(y_c) * c_grad * c_grad * c_grad
+
+        global_sum = np.sum(c_out.reshape((-1, c_out.shape[2])), axis=0)
+        alpha_denom = conv_grad_second * 2.0 + conv_grad_third * global_sum.reshape((1, 1, c_out.shape[2]))
+        alpha_denom = np.where(alpha_denom != 0.0, alpha_denom, 1)#np.ones(alpha_denom.shape))
+
+        alpha_num = conv_grad_second
+
+        alphas = alpha_num / alpha_denom
+
+        #alphas_norm_const = np.sum(alphas, axis=(0, 1))
+        alphas_norm_const = np.sum(np.sum(alphas, axis=0), axis=0)
+        alphas_norm_const = np.where(alphas_norm_const != 0.0, alphas_norm_const, 1)#np.ones(alphas_norm_const.shape))
+        alphas /= alphas_norm_const
+
+        weights = np.maximum(conv_grad_first, 0.0)
+        dlw = np.sum((weights * alphas).reshape((-1, c_out.shape[2])), axis=0)    # deep linearization weights
+        dlw = dlw.reshape((1, 1, -1))
+
+        gcam = np.sum(dlw * c_out, axis=2)
+        # gcam += 0.5
+        gcam = np.maximum(gcam, 0.0)
         if np.min(gcam) == 0 and np.max(gcam) == 0:
             gcam[...] = 0
         else:

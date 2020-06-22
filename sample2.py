@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 from utils.datasets import load_data, train_test_split
 from utils.common import time_counter
-from utils.grad_cam import get_grad_cam
+from utils.grad_cam import get_grad_cam, get_grad_cam_plusplus
 
 from models.simple import SimpleCNN
 from models.wrapper import ResNet50, VGG16
@@ -70,7 +70,8 @@ gcam_list = []
 for label in range(3):
     cnt = 0
     for inputs, labels in test_ds:
-        L, pred = get_grad_cam(model, inputs, label, loss, final_conv_idx)
+        # L, pred = get_grad_cam(model, inputs, label, loss, final_conv_idx)
+        L, pred = get_grad_cam_plusplus(model, inputs, label, loss, final_conv_idx)
         pred = np.argmax(pred, axis=1)
         inputs = inputs.numpy()
         labels = labels.numpy()
@@ -79,10 +80,11 @@ for label in range(3):
         for org, t, p, gcam in zip(inputs, labels, pred, L):
             gcam = np.uint8(255*gcam)
             resized_gcam = cv2.resize(gcam, (width, height), cv2.INTER_LINEAR)
-            resized_gcam = np.transpose(resized_gcam, (1, 0)) # opencvのフォーマットに変換
-            org = np.transpose(org, (1, 0, 2)) # opencvのフォーマットに変換
+            # resized_gcam = np.transpose(resized_gcam, (1, 0)) # opencvのフォーマットに変換
+            org = org*255. # opencvのフォーマットに変換
             resized_gcam = cv2.applyColorMap(resized_gcam, cv2.COLORMAP_JET)
             out = cv2.addWeighted(cv2.cvtColor(org.astype('uint8'), cv2.COLOR_RGB2BGR), 0.5, resized_gcam, 0.5, 0)
+            out = cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
             plt.clf()
             plt.imshow(out)
             plt.savefig('gcam/{}/id{}_t{}_p{}.png'.format(label, cnt, t, p))
