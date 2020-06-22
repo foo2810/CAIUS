@@ -61,7 +61,13 @@ loss = tfk.losses.SparseCategoricalCrossentropy()
 opt = tfk.optimizers.Adam(lr)
 
 # Training
-hist = training_simCRL(model, train_ds, test_ds, loss, opt, n_epochs, batch_size, n_classes, weight_name=str(result_path / 'best_param'))
+# pre_w = model.layers[-4].weights[0].numpy().copy()
+# train_ds = train_ds.take(2)
+hist = training_simCRL(model, train_ds, test_ds, loss, opt, n_epochs, batch_size, 
+                        n_classes, weight_name=str(result_path / 'best_param'),
+                        encoder_opt=tfk.optimizers.Adam(1e-3), encoder_epochs=10)
+# post_w = model.layers[-4].weights[0].numpy()
+# print(np.array_equal(pre_w, post_w))
 
 hist_file_path = str(result_path / 'history.csv')
 pd.DataFrame(hist).to_csv(hist_file_path)

@@ -493,7 +493,8 @@ def training_simCRL(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
             return epoch_wise_loss, model
 
         # Loss
-        loss = tfk.losses.SparseCategoricalCrossentropy()
+        loss = tfk.losses.SparseCategoricalCrossentropy(from_logits=True, 
+                                                          reduction=tfk.losses.Reduction.SUM)
 
         # model
         simclr_model = get_simclr_model(encoder_model, 256, 128, 50)
@@ -506,6 +507,8 @@ def training_simCRL(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
 
     simclr_model, hist_nt_xentloss = training_SimCLR_Encoder(encoder_model=encoder_model, optimizer=encoder_opt, train_ds=train_ds, n_epochs=encoder_epochs)
 
+    # return hist_nt_xentloss
+    
     # =============================================================================
     # Fine-tuning
     # =============================================================================
