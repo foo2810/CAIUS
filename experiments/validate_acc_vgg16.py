@@ -11,13 +11,16 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import pickle
+from pathlib import Path
 
 from utils.datasets import load_data, train_test_split
 from utils.train import training_mixup
 from utils.data_augment import random_flip_left_right, random_rotate_90, gen_random_cutout
 from utils.common import time_counter
+from utils.plots import plot_learning_curve
 
-import models
+import models.wrapper
+import models.wrapper_T
 
 tfk = tf.keras
 tfk.backend.set_floatx('float32')
@@ -31,10 +34,12 @@ n_epochs = 100
 # Dataset
 print('[Dataset]')
 with time_counter():
-    with open('train_size128.pkl') as fp:
+    dirpath = ""
+    with Path(dirpath + 'data/data_cache/train_size128.pkl').open('rb') as fp:
         x_train, y_train = pickle.load(fp)
-    with open('test_size128.pkl') as fp:
+    with Path(dirpath + 'data/data_cache/test_size128.pkl').open('rb') as fp:
         x_test, y_test = pickle.load(fp)
+
     n_train = len(x_train)
 
     _random_cutout = gen_random_cutout(42)
@@ -53,6 +58,7 @@ with time_counter():
         .shuffle(n_train).map(augment) \
         .batch(batch_size).repeat(3)  # datasetのサイズを3倍に
     test_ds = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(batch_size)
+
 print('x_train: {}'.format(x_train.shape))
 print('y_train: {}'.format(y_train.shape))
 print('x_test: {}'.format(x_test.shape))
@@ -89,5 +95,5 @@ for model_name in models_and_params:
         hist = training_mixup(model, train_ds, test_ds, loss, opt, n_epochs, batch_size, n_classes, alpha=alpha,
                               output_best_weights=True, weight_name=weight_name, train_weights=train_weights)
 
+    plot_learning_curve('history_{}.png'.format(model_name), history=hist, epochs=n_epochs)
     pd.DataFrame(hist).to_csv('history_{}.csv'.format(model_name))
-
