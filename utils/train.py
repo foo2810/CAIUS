@@ -180,3 +180,140 @@ def training_mixup(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_si
     
     return hist
 
+
+from utils.losses import SupConLoss
+def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, output_best_weights=True, weight_name=None, train_weights=None, **kwargs):
+    """
+    https://github.com/sayakpaul/Supervised-Contrastive-Learning-in-TensorFlow-2 からのコピペ
+
+    encoder_model: 
+
+    **kwargs
+        encoder_opt: 
+        encoder_epochs:
+    """
+
+    encoder_opt = kwargs.get("encoder_opt", None)
+    encoder_epochs = kwargs.get("encoder_epochs", 10)
+
+    def training_SupCon_Encoder(encoder_model=None, train_ds=None, optimizer=None, n_epochs=20):
+        """
+        Encoder nework and Projection network 自己教師ありの部分
+        """
+
+        if train_ds is None:
+            raise ValueError("train_ds most not be None")
+
+        if encoder_model is None:
+            # encoder_model = ResNet50(weights=None, include_top=False)
+            raise ValueError("encoder_model most not be None")
+
+        if optimizer is None:
+            optimizer = tfk.optimizers.Adam(learning_rate=1e-3)
+            
+
+        class UnitNormLayer(tf.keras.layers.Layer):
+            # Reference: https://github.com/wangz10/contrastive_loss/blob/master/model.py
+            '''Normalize vectors (euclidean norm) in batch to unit hypersphere.
+            '''
+            def __init__(self):
+                super().__init__()
+
+            def call(self, input_tensor):
+                norm = tf.norm(input_tensor, axis=1)
+                return input_tensor / tf.reshape(norm, [-1, 1])
+            
+        # Encoder Network
+        def encoder_net(encoder_model: tfk.Model):
+            inputs = tfk.Input((128, 128, 3))
+            normalization_layer = UnitNormLayer()
+
+            encoder = encoder_model
+            encoder.trainable = True
+
+            embeddings = encoder(inputs, training=True)
+            embeddings = tfk.layers.GlobalAveragePooling2D()(embeddings)
+            norm_embeddings = normalization_layer(embeddings)
+
+            encoder_network = tfk.Model(inputs, norm_embeddings)
+
+            return encoder_network
+
+        # Projector Network
+        def projector_net(encoder_r: tfk.Model):
+            encoder_r.trainable = True
+            projector = tfk.models.Sequential([
+                encoder_r,
+                tfk.layers.Dense(256, activation="relu"),
+                UnitNormLayer()
+            ])
+
+            return projector
+
+        # Training the encoder and the projector
+
+        encoder_r = encoder_net(encoder_model)
+        projector_z = projector_net(encoder_r)
+        supConloss = SupConLoss()
+
+        @tf.function
+        def train_step(images, labels):
+            with tf.GradientTape() as tape:
+                z = projector_z(images, training=True)
+                loss = supConloss(z, labels)
+
+            gradients = tape.gradient(loss, projector_z.trainable_variables)
+            optimizer.apply_gradients(zip(gradients, projector_z.trainable_variables))
+
+            return loss
+
+        train_loss_results = []
+
+        epoch_loss_avg = tf.keras.metrics.Mean()
+        for epoch in range(n_epochs):	
+            for (images, labels) in train_ds:
+                loss = train_step(images, labels)
+                epoch_loss_avg.update_state(loss) 
+
+                # TODO loss が nan になることがある
+                if tf.math.is_nan(loss):
+                    print("loss", loss)
+                    print("encoder_r output is nan:", tf.reduce_any(tf.math.is_nan(encoder_r(images))).numpy())
+                    print("projector_z output is nan:", tf.reduce_any(tf.math.is_nan(projector_z(images))).numpy())
+                    import sys;sys.exit()
+
+            print("Epoch[{}/{}] Loss: {:.3f}".format(epoch+1, n_epochs, epoch_loss_avg.result()))
+
+            train_loss_results.append(epoch_loss_avg.result().numpy())
+
+            epoch_loss_avg.reset_states()
+
+        hist = {"'supervised_contrastive_loss'": train_loss_results}
+        return encoder_r, hist
+
+    # Training for Encoder Network
+    encoder_r, hist_cupCon = training_SupCon_Encoder(encoder_model=encoder_model, optimizer=encoder_opt, train_ds=train_ds, n_epochs=encoder_epochs)
+
+    # =============================================================================
+    # Classifer 部分　教師あり学習
+    # =============================================================================
+
+    # model
+    def supervised_model(encoder_r: tfk.Model, output_size):
+        inputs = tfk.Input((128, 128, 3))
+        encoder_r.trainable = False
+
+        r = encoder_r(inputs, training=False)
+        outputs = tfk.layers.Dense(output_size, activation='softmax')(r)
+
+        supervised_model = tfk.Model(inputs, outputs)
+    
+        return supervised_model
+
+    model = supervised_model(encoder_r, n_classes)
+
+    # Training
+    hist = training(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, weight_name=weight_name)
+
+    return hist
+
