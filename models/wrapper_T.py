@@ -152,7 +152,10 @@ def DenseNet201(input_shape, classes=3, classifier_activation='softmax', classif
 
 def EfficientNetBx(model_arch, input_shape, classes=3, classifier_activation='softmax', classifier=None, **kwargs):
     base = model_arch(include_top=False, weights='imagenet', classes=classes, input_shape=input_shape, **kwargs)
-    dropout_rate = kwargs['dropout_rate']
+    if 'dropout_rate' not in kwargs:
+        dropout_rate = 0.2
+    else:
+        dropout_rate = kwargs['dropout_rate']
     if classifier is None:
         classifier = tfk.Sequential()
         classifier.add(tfk.layers.GlobalAveragePooling2D(name='avg_pool'))
