@@ -21,10 +21,19 @@ def _f(model, inputs, label, loss_fn, final_conv_idx):
     return pred, conv_out, grads
     
 
-def get_grad_cam(model, inputs, label, loss_fn, final_conv_idx):
-    # if final_conv_idx < 0:
-    #     final_conv_idx += len(model.layers)
-    h = model.layers[final_conv_idx].output
+def get_grad_cam(model, inputs, label, loss_fn, final_conv_idx=None, final_conv_name=None, conv_layer=None):
+    if conv_layer is not None:
+        h = conv_layer
+    else:
+        if final_conv_idx is None and final_conv_name is None:
+            raise ValueError
+        elif final_conv_idx is not None and final_conv_name is None:
+            h = model.layers[final_conv_idx].output
+        elif final_conv_idx is None and final_conv_name is not None:
+            h = model.get_layer(name=final_conv_name).output
+        else:
+            # 名前指定を優先
+            h = model.get_layer(name=final_conv_name).output
 
     tmp_model = tfk.Model(model.inputs, [model.output, h])
     pred, conv_out, final_conv_grad = _f(tmp_model, inputs, label, loss_fn, final_conv_idx)
@@ -63,8 +72,19 @@ def get_grad_cam(model, inputs, label, loss_fn, final_conv_idx):
 
     return cam_list, pred
 
-def get_grad_cam_plusplus(model, inputs, label, loss_fn, conv_idx):
-    h = model.layers[conv_idx].output
+def get_grad_cam_plusplus(model, inputs, label, loss_fn, conv_idx, final_conv_idx=None, final_conv_name=None, conv_layer=None):
+    if conv_layer is not None:
+        h = conv_layer
+    else:
+        if final_conv_idx is None and final_conv_name is None:
+            raise ValueError
+        elif final_conv_idx is not None and final_conv_name is None:
+            h = model.layers[final_conv_idx].output
+        elif final_conv_idx is None and final_conv_name is not None:
+            h = model.get_layer(name=final_conv_name).output
+        else:
+            # 名前指定を優先
+            h = model.get_layer(name=final_conv_name).output
 
     tmp_model = tfk.Model(model.inputs, [model.output, h])
     pred, conv_out, conv_grad = _f(tmp_model, inputs, label, loss_fn, conv_idx)
