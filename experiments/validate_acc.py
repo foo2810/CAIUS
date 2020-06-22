@@ -75,14 +75,14 @@ models_and_params = {
     'inceptionv3_pretrained': (models.wrapper_T.InceptionV3(classes=3, input_shape=in_shape), 7.9e-5, 0.2, True),
     'densenet121_pretrained': (models.wrapper_T.DenseNet121(classes=3, input_shape=in_shape), 7.1e-5, 0.2, True),
     'inceptionresnetv2_pretrained': (models.wrapper_T.InceptionResNetV2(classes=3, input_shape=in_shape), 5.5e-5, 0.2,  True),
-    'efficientnetb0': (models.wrapper_T.EfficientNetB0(classes=3, input_shape=in_shape), 5e-3, 0.2, True),
+    'efficientnetb0_pretraind': (models.wrapper_T.EfficientNetB0(classes=3, input_shape=in_shape), 5e-3, 0.2, True),
 
     'vgg16_ft': (models.wrapper_T.VGG16(classes=3, input_shape=in_shape), 1e-5, 0.2, False),
     'resnet50_ft': (models.wrapper_T.ResNet50(classes=3, input_shape=in_shape), 8.7e-5, 0.2, False),
     'inceptionv3_ft': (models.wrapper_T.InceptionV3(classes=3, input_shape=in_shape), 7.9e-5, 0.2, False),
     'densenet121_ft': (models.wrapper_T.DenseNet121(classes=3, input_shape=in_shape), 7.1e-5, 0.2, False),
     'inceptionresnetv2_ft': (models.wrapper_T.InceptionResNetV2(classes=3, input_shape=in_shape), 5.5e-5, 0.2, False),
-    'efficientnetb0': (models.wrapper_T.EfficientNetB0(classes=3, input_shape=in_shape), 5e-3, 0.2, False),
+    'efficientnetb0_ft': (models.wrapper_T.EfficientNetB0(classes=3, input_shape=in_shape), 5e-3, 0.2, False),
 }
 
 # Loss

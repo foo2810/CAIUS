@@ -1,7 +1,7 @@
 # 転移学習・FT 
 
 import tensorflow as tf
-import models
+import models.efficientnet.tfkeras
 
 tfk = tf.keras
 
