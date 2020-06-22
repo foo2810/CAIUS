@@ -72,19 +72,19 @@ def get_grad_cam(model, inputs, label, loss_fn, final_conv_idx=None, final_conv_
 
     return cam_list, pred
 
-def get_grad_cam_plusplus(model, inputs, label, loss_fn, conv_idx, final_conv_idx=None, final_conv_name=None, conv_layer=None):
+def get_grad_cam_plusplus(model, inputs, label, loss_fn, conv_idx=None, conv_name=None, conv_layer=None):
     if conv_layer is not None:
         h = conv_layer
     else:
-        if final_conv_idx is None and final_conv_name is None:
+        if conv_idx is None and conv_name is None:
             raise ValueError
-        elif final_conv_idx is not None and final_conv_name is None:
-            h = model.layers[final_conv_idx].output
-        elif final_conv_idx is None and final_conv_name is not None:
-            h = model.get_layer(name=final_conv_name).output
+        elif conv_idx is not None and conv_name is None:
+            h = model.layers[conv_idx].output
+        elif conv_idx is None and conv_name is not None:
+            h = model.get_layer(name=conv_name).output
         else:
             # 名前指定を優先
-            h = model.get_layer(name=final_conv_name).output
+            h = model.get_layer(name=conv_name).output
 
     tmp_model = tfk.Model(model.inputs, [model.output, h])
     pred, conv_out, conv_grad = _f(tmp_model, inputs, label, loss_fn, conv_idx)
