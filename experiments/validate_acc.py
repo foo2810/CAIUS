@@ -15,7 +15,8 @@ from utils.train import training_mixup
 from utils.data_augment import random_flip_left_right, random_rotate_90, gen_random_cutout
 from utils.common import time_counter
 
-import models
+import models.wrapper
+import models.wrapper_T
 
 tfk = tf.keras
 tfk.backend.set_floatx('float32')
@@ -29,9 +30,9 @@ n_epochs = 100
 # Dataset
 print('[Dataset]')
 with time_counter():
-    with open('train_size128.pkl') as fp:
+    with open('train_size128.pkl', 'rb') as fp:
         x_train, y_train = pickle.load(fp)
-    with open('test_size128.pkl') as fp:
+    with open('test_size128.pkl', 'rb') as fp:
         x_test, y_test = pickle.load(fp)
     n_train = len(x_train)
 
@@ -62,23 +63,26 @@ with open('test_ds.pkl', 'wb') as fp:
 del x_train, y_train, x_test, y_test
 
 models_and_params = {
+    'vgg16': (models.wrapper.VGG16(weights=None, classes=3, input_shape=in_shape), 1e-5, 0.2, False),
     'resnet50': (models.wrapper.ResNet50(weights=None, classes=3, input_shape=in_shape), 8.7e-5, 0.2, False),
     'inceptionv3': (models.wrapper.InceptionV3(weights=None, classes=3, input_shape=in_shape), 7.9e-5, 0.2, False),
     'densenet121': (models.wrapper.DenseNet121(weights=None, classes=3, input_shape=in_shape), 7.1e-5, 0.2, False),
     'inceptionresnetv2': (models.wrapper.InceptionResNetV2(weights=None, classes=3, input_shape=in_shape), 5.5e-5, 0.2, False),
-    # 'efficientnet': (models.efficientnet.tfkeras.EfficientNetB0(weights=None, classes=3, input_shape=in_shape), (,)),
+    'efficientnetb0': (models.efficientnet.tfkeras.EfficientNetB0(weights=None, classes=3, input_shape=in_shape), 5e-3, 0.2, False),
 
+    'vgg16_pretrained': (models.wrapper_T.VGG16(classes=3, input_shape=in_shape), 1e-5, 0.2, True),
     'resnet50_pretraind': (models.wrapper_T.ResNet50(classes=3, input_shape=in_shape), 8.7e-5, 0.2, True),
     'inceptionv3_pretrained': (models.wrapper_T.InceptionV3(classes=3, input_shape=in_shape), 7.9e-5, 0.2, True),
-    'densenet121_pretrained': (models.wrapper_T.DenseNet121( classes=3, input_shape=in_shape), 7.1e-5, 0.2, True),
+    'densenet121_pretrained': (models.wrapper_T.DenseNet121(classes=3, input_shape=in_shape), 7.1e-5, 0.2, True),
     'inceptionresnetv2_pretrained': (models.wrapper_T.InceptionResNetV2(classes=3, input_shape=in_shape), 5.5e-5, 0.2,  True),
-    # 'efficientnet': (models.efficientnet.tfkeras.EfficientNetB0(weights=None, classes=3, input_shape=in_shape), (,)),
+    'efficientnetb0': (models.wrapper_T.EfficientNetB0(classes=3, input_shape=in_shape), 5e-3, 0.2, True),
 
+    'vgg16_ft': (models.wrapper_T.VGG16(classes=3, input_shape=in_shape), 1e-5, 0.2, False),
     'resnet50_ft': (models.wrapper_T.ResNet50(classes=3, input_shape=in_shape), 8.7e-5, 0.2, False),
     'inceptionv3_ft': (models.wrapper_T.InceptionV3(classes=3, input_shape=in_shape), 7.9e-5, 0.2, False),
-    'densenet121_ft': (models.wrapper_T.DenseNet121( classes=3, input_shape=in_shape), 7.1e-5, 0.2, False),
+    'densenet121_ft': (models.wrapper_T.DenseNet121(classes=3, input_shape=in_shape), 7.1e-5, 0.2, False),
     'inceptionresnetv2_ft': (models.wrapper_T.InceptionResNetV2(classes=3, input_shape=in_shape), 5.5e-5, 0.2, False),
-    # 'efficientnet': (models.efficientnet.tfkeras.EfficientNetB0(weights=None, classes=3, input_shape=in_shape), (,)),
+    'efficientnetb0': (models.wrapper_T.EfficientNetB0(classes=3, input_shape=in_shape), 5e-3, 0.2, False),
 }
 
 # Loss
