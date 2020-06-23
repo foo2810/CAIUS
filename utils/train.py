@@ -256,11 +256,17 @@ def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
         projector_z = projector_net(encoder_r)
         supConloss = SupConLoss()
 
+        # encoder_r.summary()
+        # projector_z.summary()
+
         @tf.function
         def train_step(images, labels):
             with tf.GradientTape() as tape:
+                tf.print(">> train_step", images.shape, labels.shape)
                 z = projector_z(images, training=True)
+                tf.print("  ", "z:", z.shape, "include nan?", tf.reduce_any(tf.math.is_nan(z)))
                 loss = supConloss(z, labels)
+                tf.print("  ", "loss:", loss, "include nan?", tf.math.is_nan(loss))
 
             gradients = tape.gradient(loss, projector_z.trainable_variables)
             optimizer.apply_gradients(zip(gradients, projector_z.trainable_variables))
@@ -273,7 +279,8 @@ def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
         for epoch in range(n_epochs):	
             for (images, labels) in train_ds:
                 loss = train_step(images, labels)
-                epoch_loss_avg.update_state(loss) 
+                epoch_loss_avg.update_state(loss)
+                print();print()
 
                 # TODO loss が nan になることがある
                 if tf.math.is_nan(loss):
@@ -293,6 +300,8 @@ def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
 
     # Training for Encoder Network
     encoder_r, hist_cupCon = training_SupCon_Encoder(encoder_model=encoder_model, optimizer=encoder_opt, train_ds=train_ds, n_epochs=encoder_epochs)
+
+    return hist_cupCon
 
     # =============================================================================
     # Classifer 部分　教師あり学習
@@ -508,7 +517,7 @@ def training_simCRL(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
     simclr_model, hist_nt_xentloss = training_SimCLR_Encoder(encoder_model=encoder_model, optimizer=encoder_opt, train_ds=train_ds, n_epochs=encoder_epochs)
 
     # return hist_nt_xentloss
-    
+
     # =============================================================================
     # Fine-tuning
     # =============================================================================

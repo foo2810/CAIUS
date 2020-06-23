@@ -52,8 +52,6 @@ if not result_path.exists():
 
 
 # Model
-# model = SimpleCNN(in_shape, n_out=3)
-# model = VGG16(weights=None, classes=3, input_shape=in_shape)
 model = ResNet50(weights=None, include_top=False)
 
 # Loss
@@ -63,7 +61,10 @@ loss = tfk.losses.SparseCategoricalCrossentropy()
 opt = tfk.optimizers.Adam(lr)
 
 # Training
-hist = training_supCon(model, train_ds, test_ds, loss, opt, n_epochs, batch_size, n_classes, weight_name=str(result_path / 'best_param'))
+train_ds = train_ds.unbatch().batch(4).take(2)
+hist = training_supCon(model, train_ds, test_ds, loss, opt, n_epochs, batch_size,
+                        n_classes, weight_name=str(result_path / 'best_param'),
+                        encoder_opt=tfk.optimizers.Adam(1e2), encoder_epochs=10)
 
 hist_file_path = str(result_path / 'history.csv')
 pd.DataFrame(hist).to_csv(hist_file_path)

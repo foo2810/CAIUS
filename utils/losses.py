@@ -149,6 +149,8 @@ class SupConLoss(tfk.losses.Loss):
             y: ground truth of shape [bsz].
             metric: one of ('euclidean', 'cosine')
         '''
+        tf.print("   >> SupConLoss", z.shape, y.shape, 
+                "include nan?", tf.reduce_any(tf.math.is_nan(z)) )
         # compute pair-wise distance matrix
         if metric == 'euclidean':
             D = self.__pdist_euclidean(z)
@@ -156,6 +158,9 @@ class SupConLoss(tfk.losses.Loss):
             D = 1 - tf.matmul(z, z, transpose_a=False, transpose_b=True)
         # convert squareform matrix to vector form
         d_vec = self.__square_to_vec(D)
+        tf.print("    ", "d_vec:", d_vec.shape, "include nan?", tf.reduce_any(tf.math.is_nan(d_vec)))
+        tf.print("    ", "d_vec:", d_vec) # 0が含まれると,このLossでの重みの更新で次のモデル出力にnanが含まれるようになる．結果次のLossがnanになる
+        tf.print("    ", "d_vec include 0?:", (tf.math.reduce_min(d_vec)==0.), "min:", tf.math.reduce_min(d_vec))
         # make contrastive labels
         y_contrasts = self.__get_contrast_batch_labels(y)
         loss = contrastive_loss(y_contrasts, d_vec, margin=margin)
@@ -170,6 +175,15 @@ class SupConLoss(tfk.losses.Loss):
         # turn r into column vector
         r = tf.reshape(r, [-1, 1])
         D = r - 2*tf.matmul(A, tf.transpose(A)) + tf.transpose(r)
+        # 0が-0.754e-08とかになるとsqrtによって対角成分にnanが含まれることがあるが，対角成分は使用しないため問題なし
+        tf.print("     >>", self.__square_to_vec(tf.sqrt(D)))
+        
+        # 上記の求め方と1e-4桁以下で値が異なるがおそらく安定している+0が出ない
+        expanded_a = tf.expand_dims(A, 1)
+        expanded_b = tf.expand_dims(A, 0)
+        D = tf.reduce_sum(tf.math.squared_difference(expanded_a, expanded_b), 2)
+        tf.print("     >>", self.__square_to_vec(tf.sqrt(D)))
+        # D += 1e-6 # add a small constant to compensate for the floating point instabilities
         return tf.sqrt(D)
 
     def __square_to_vec(self, D):
