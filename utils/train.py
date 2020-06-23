@@ -262,11 +262,8 @@ def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
         @tf.function
         def train_step(images, labels):
             with tf.GradientTape() as tape:
-                tf.print(">> train_step", images.shape, labels.shape)
                 z = projector_z(images, training=True)
-                tf.print("  ", "z:", z.shape, "include nan?", tf.reduce_any(tf.math.is_nan(z)))
                 loss = supConloss(z, labels)
-                tf.print("  ", "loss:", loss, "include nan?", tf.math.is_nan(loss))
 
             gradients = tape.gradient(loss, projector_z.trainable_variables)
             optimizer.apply_gradients(zip(gradients, projector_z.trainable_variables))
@@ -280,14 +277,13 @@ def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
             for (images, labels) in train_ds:
                 loss = train_step(images, labels)
                 epoch_loss_avg.update_state(loss)
-                print();print()
 
                 # TODO loss が nan になることがある
                 if tf.math.is_nan(loss):
                     print("loss", loss)
                     print("encoder_r output is nan:", tf.reduce_any(tf.math.is_nan(encoder_r(images))).numpy())
                     print("projector_z output is nan:", tf.reduce_any(tf.math.is_nan(projector_z(images))).numpy())
-                    import sys;sys.exit()
+                    return dict()
 
             print("Epoch[{}/{}] Loss: {:.3f}".format(epoch+1, n_epochs, epoch_loss_avg.result()))
 
@@ -301,7 +297,7 @@ def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
     # Training for Encoder Network
     encoder_r, hist_cupCon = training_SupCon_Encoder(encoder_model=encoder_model, optimizer=encoder_opt, train_ds=train_ds, n_epochs=encoder_epochs)
 
-    return hist_cupCon
+    # return hist_cupCon
 
     # =============================================================================
     # Classifer 部分　教師あり学習
