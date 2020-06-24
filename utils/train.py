@@ -22,7 +22,7 @@ def training(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, ou
     @tf.function
     def train_step(model, inputs, labels):
         with tf.GradientTape() as tape:
-            pred = model(inputs)
+            pred = model(inputs, training=True)
             loss_val = loss(labels, pred)
         # grads = tape.gradient(loss_val, model.trainable_variables)
         # optimizer.apply_gradients(zip(grads, model.trainable_variables))
@@ -34,7 +34,7 @@ def training(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, ou
 
     @tf.function
     def test_step(model, inputs, labels):
-        pred = model(inputs)
+        pred = model(inputs, training=False)
         loss_val = loss(labels, pred)
         test_loss(loss_val)
         test_acc(labels, pred)
@@ -113,7 +113,7 @@ def training_mixup(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_si
     @tf.function
     def train_step(model, inputs, labels):
         with tf.GradientTape() as tape:
-            pred = model(inputs)
+            pred = model(inputs, training=True)
             loss_val = loss(tf.one_hot(labels, n_classes), pred)
         # grads = tape.gradient(loss_val, model.trainable_variables)
         # optimizer.apply_gradients(zip(grads, model.trainable_variables))
@@ -135,7 +135,7 @@ def training_mixup(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_si
 
     @tf.function
     def test_step(model, inputs, labels):
-        pred = model(inputs)
+        pred = model(inputs, training=False)
         loss_val = loss(tf.one_hot(labels, n_classes), pred)
         test_loss(loss_val)
         test_acc(labels, pred)
@@ -227,13 +227,15 @@ def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
             
         # Encoder Network
         def encoder_net(encoder_model: tfk.Model):
-            inputs = tfk.Input((128, 128, 3))
+            # inputs = tfk.Input((128, 128, 3))
+            inputs = encoder_model.inputs
             normalization_layer = UnitNormLayer()
 
             encoder = encoder_model
             encoder.trainable = True
 
-            embeddings = encoder(inputs, training=True)
+            # embeddings = encoder(inputs, training=True)
+            embeddings = encoder_model.layers[-1].output
             embeddings = tfk.layers.GlobalAveragePooling2D()(embeddings)
             norm_embeddings = normalization_layer(embeddings)
 
@@ -307,10 +309,12 @@ def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
 
     # model
     def supervised_model(encoder_r: tfk.Model, output_size):
-        inputs = tfk.Input((128, 128, 3))
+        # inputs = tfk.Input((128, 128, 3))
+        inputs = encoder_r.inputs
         encoder_r.trainable = False
 
-        r = encoder_r(inputs, training=False)
+        # r = encoder_r(inputs, training=False)
+        r = encoder_r.layers[-1].output
         outputs = tfk.layers.Dense(output_size, activation='softmax')(r)
 
         supervised_model = tfk.Model(inputs, outputs)

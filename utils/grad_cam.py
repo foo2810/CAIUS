@@ -10,7 +10,7 @@ tfk = tf.keras
 def _f(model, inputs, label, loss_fn, final_conv_idx):
     with tf.GradientTape() as tape:
         # pred = model(inputs)
-        pred, conv_out = model(inputs)
+        pred, conv_out = model(inputs, training=False)
         # loss_val = loss_fn(labels, pred)
         # grads = tape.gradient(loss_val, conv_out)
         grads = tape.gradient(pred[:, label], conv_out)
