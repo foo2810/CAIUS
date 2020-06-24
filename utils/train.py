@@ -182,7 +182,7 @@ def training_mixup(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_si
 
 
 from utils.losses import SupConLoss
-def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, output_best_weights=True, weight_name=None, train_weights=None, **kwargs):
+def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, alpha, output_best_weights=True, weight_name=None, train_weights=None, **kwargs):
     """
     https://github.com/sayakpaul/Supervised-Contrastive-Learning-in-TensorFlow-2 からのコピペ
 
@@ -318,12 +318,12 @@ def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
     model = supervised_model(encoder_r, n_classes)
 
     # Training
-    hist = training(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, weight_name=weight_name)
+    hist = training_mixup(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, alpha, weight_name=weight_name)
 
     return hist
 
 
-def training_simCRL(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, output_best_weights=True, weight_name=None, train_weights=None, **kwargs):
+def training_simCRL(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, alpha, output_best_weights=True, weight_name=None, train_weights=None, **kwargs):
     """
     https://github.com/sayakpaul/SimCLR-in-TensorFlow-2 からのコピペ
 
@@ -528,7 +528,7 @@ def training_simCRL(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
     linear_model = supervised_model(projection, n_classes)
 
     # Training
-    hist = training(linear_model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, weight_name=weight_name)
+    hist = training_mixup(linear_model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, alpha, weight_name=weight_name)
 
     return hist
 

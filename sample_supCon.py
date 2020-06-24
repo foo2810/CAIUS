@@ -14,8 +14,7 @@ from utils.train import training_supCon
 from utils.common import time_counter
 
 from models.simple import SimpleCNN
-from models.wrapper import VGG16, ResNet50
-from utils.losses import SupConLoss
+from models.wrapper import VGG16, ResNet50, DenseNet121
 
 tfk = tf.keras
 tfk.backend.set_floatx('float32')
@@ -52,10 +51,10 @@ if not result_path.exists():
 
 
 # Model
-model = ResNet50(weights=None, include_top=False)
+model = DenseNet121(weights=None, include_top=False)
 
 # Loss
-loss = tfk.losses.SparseCategoricalCrossentropy()
+loss = tfk.losses.CategoricalCrossentropy()
 
 # Optimizer
 opt = tfk.optimizers.Adam(lr)
@@ -63,7 +62,7 @@ opt = tfk.optimizers.Adam(lr)
 # Training
 # train_ds = train_ds.unbatch().batch(4).take(2)
 hist = training_supCon(model, train_ds, test_ds, loss, opt, n_epochs, batch_size,
-                        n_classes, weight_name=str(result_path / 'best_param'),
+                        n_classes, alpha=0.2, weight_name=str(result_path / 'best_param'),
                         encoder_opt=tfk.optimizers.Adam(1e-3), encoder_epochs=20)
 
 hist_file_path = str(result_path / 'history.csv')

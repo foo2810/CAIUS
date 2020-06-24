@@ -15,7 +15,7 @@ from utils.data_augment import random_flip_left_right, random_rotate_90, gen_ran
 from utils.common import time_counter
 
 from models.simple import SimpleCNN
-from models.wrapper import VGG16, ResNet50, InceptionV3
+from models.wrapper import VGG16, ResNet50, InceptionV3, DenseNet121
 # from models.wrapper_T import VGG16, ResNet50, InceptionV3
 
 tfk = tf.keras
@@ -52,18 +52,18 @@ if not result_path.exists():
 
 
 # Model
-model = ResNet50(weights=None, include_top=False)
+model = DenseNet121(weights=None, include_top=False)
 
 # Loss
-loss = tfk.losses.SparseCategoricalCrossentropy()
+loss = tfk.losses.CategoricalCrossentropy()
 
 # Optimizer
 opt = tfk.optimizers.Adam(lr)
 
 # Training
-classifier_train_ds = train_ds.take(2) # 2 batch
+classifier_train_ds = train_ds#.take(2) # 2 batch
 hist = training_simCRL(model, classifier_train_ds, test_ds, loss, opt, n_epochs, batch_size, 
-                        n_classes, weight_name=str(result_path / 'best_param'),
+                        n_classes, alpha=0.2, weight_name=str(result_path / 'best_param'),
                         encoder_opt=tfk.optimizers.Adam(1e-3), encoder_epochs=10, encoder_dataset=train_ds)
 
 hist_file_path = str(result_path / 'history.csv')
