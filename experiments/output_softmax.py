@@ -12,6 +12,7 @@ import pandas as pd
 import pickle
 from pathlib import Path
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
 
 from utils.grad_cam import get_grad_cam, get_grad_cam_plusplus
 from utils.common import time_counter
@@ -69,6 +70,7 @@ models_and_params = {
 }
 
 # Validating
+accs = {}
 for model_name in models_and_params:
     print(model_name)
     tockens = model_name.split('_')
@@ -86,7 +88,7 @@ for model_name in models_and_params:
     preds = []
     trues = []
     for inputs, labels in test_ds:
-        pred = model(inputs)
+        pred = model(inputs, training=False)
         pred = pred.numpy()
         labels = tf.one_hot(labels, depth=n_classes)
         labels = labels.numpy()
@@ -97,7 +99,20 @@ for model_name in models_and_params:
     preds = np.concatenate(preds)
     trues = np.concatenate(trues)
 
+    acc = np.mean(np.argmax(preds, axis=1) == np.argmax(trues, axis=1))
+    accs[model_name] = acc
+
+    cm = confusion_matrix(np.argmax(trues, axis=1), np.argmax(preds, axis=1))
+    df = pd.DataFrame(cm)
+    df.columns = ['Normal', 'Nude', 'Swimwear']
+    df.index = ['Normal', 'Nude', 'Swimwear']
+    df.to_csv('{}_cm.csv'.format(model_name))
+
     rows = np.concatenate([trues, preds], axis=1)
     df = pd.DataFrame(rows)
     df.columns = ['true_normal', 'true_nude', 'true_swimwear', 'pred_normal', 'pred_nude', 'pred_swimwear']
     df.to_csv('{}.csv'.format(model_name))
+
+import json
+with open('accs.json', 'w') as fp:
+    json.dump(accs, fp)
