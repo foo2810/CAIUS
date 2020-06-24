@@ -68,13 +68,6 @@ models_and_params = {
     'efficientnetb0_ft': (models.wrapper_T.EfficientNetB0(classes=3, input_shape=in_shape), -6),
 }
 
-# Loss
-loss = tfk.losses.SparseCategoricalCrossentropy()
-
-save_dir = Path('gcam/')
-if not save_dir.exists():
-    save_dir.mkdir()
-
 # Validating
 for model_name in models_and_params:
     print(model_name)
@@ -90,57 +83,21 @@ for model_name in models_and_params:
 
     model.load_weights(weight_name)
 
-    # imagenet転移モデルはfunctional apiを使っていないためそのままだとgrad-cam内でエラーが出る
-    # 下記のコードを入れて強引にこれを回避
-    if train_type == 'pretrained' or train_type == 'ft':
-        x = model.layers[0].output
-        for layer in model.layers[1].layers:
-            x = layer(x)
-        model = tfk.Model(model.layers[0].inputs, [x])
+    preds = []
+    trues = []
+    for inputs, labels in test_ds:
+        pred = model(inputs)
+        pred = pred.numpy()
+        labels = tf.one_hot(labels, depth=n_classes)
+        labels = labels.numpy()
 
-    save_sub_dir = save_dir / (model_name+'/')
-    if not save_sub_dir.exists():
-        save_sub_dir.mkdir()
+        preds += [pred]
+        trues += [labels]
+    
+    preds = np.concatenate(preds)
+    trues = np.concatenate(trues)
 
-    gcam_list = []
-    for label in range(3):
-        cnt = 0
-
-        save_sub_sub_dir = save_sub_dir / (str(label)+'/')
-        if not save_sub_sub_dir.exists():
-            save_sub_sub_dir.mkdir()
-
-        for inputs, labels in test_ds:
-            if train_type == 'normal':
-                L, pred = get_grad_cam(model, inputs, label, loss, final_conv_idx)
-                # L, pred = get_grad_cam_plusplus(model, inputs, label, loss, final_conv_idx)
-            elif train_type == 'pretrained' or train_type == 'ft':
-                h = model.get_layer(index=final_conv_idx).output
-                L, pred = get_grad_cam(model, inputs, label, loss, conv_layer=h)
-                # L, pred = get_grad_cam_plusplus(model, inputs, label, loss, conv_layer=h)
-            else:
-                raise ValueError('Unknow train type')
-            
-
-            pred = np.argmax(pred, axis=1)
-            inputs = inputs.numpy()
-            labels = labels.numpy()
-
-            width, height = inputs.shape[1:3]
-            for org, t, p, gcam in zip(inputs, labels, pred, L):
-                gcam = np.uint8(255*gcam)
-                resized_gcam = cv2.resize(gcam, (width, height), cv2.INTER_LINEAR)
-                # resized_gcam = np.transpose(resized_gcam, (1, 0)) # opencvのフォーマットに変換
-                org = org * 255.   # opencvのフォーマットに変換
-                resized_gcam = cv2.applyColorMap(resized_gcam, cv2.COLORMAP_JET)
-                out = cv2.addWeighted(cv2.cvtColor(org.astype('uint8'), cv2.COLOR_RGB2BGR), 0.5, resized_gcam, 0.5, 0)
-                out = cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
-
-                save_path = save_sub_sub_dir / 'id{}_t{}_p{}.png'.format(cnt, t, p)
-
-                plt.clf()
-                plt.imshow(out)
-                plt.savefig(str(save_path))
-                cnt += 1
-
-
+    rows = np.concatenate([trues, preds], axis=1)
+    df = pd.DataFrame(rows)
+    df.columns = ['true_normal', 'true_nude', 'true_swimwear', 'pred_normal', 'pred_nude', 'pred_swimwear']
+    df.to_csv('{}.csv'.format(model_name))
