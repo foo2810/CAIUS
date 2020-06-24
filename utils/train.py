@@ -320,7 +320,8 @@ def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
     model = supervised_model(encoder_r, n_classes)
 
     # Training
-    hist = training_mixup(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, alpha, weight_name=weight_name)
+    hist = training_mixup(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, alpha, 
+                            output_best_weights=output_best_weights, weight_name=weight_name, train_weights=train_weights)
 
     return hist
 
@@ -530,7 +531,8 @@ def training_simCRL(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
     linear_model = supervised_model(projection, n_classes)
 
     # Training
-    hist = training_mixup(linear_model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, alpha, weight_name=weight_name)
+    hist = training_mixup(linear_model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, n_classes, alpha, 
+                            output_best_weights=output_best_weights, weight_name=weight_name, train_weights=train_weights)
 
     return hist
 
