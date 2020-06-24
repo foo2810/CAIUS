@@ -54,7 +54,8 @@ def training(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, ou
         for inputs, labels in test_ds:
             test_step(model, inputs, labels)
         
-        if output_best_weights and  best_acc < test_acc.result().numpy():
+        if output_best_weights and best_acc < test_acc.result().numpy():
+            print("test_acc is improved {:.3f} to {:.3f}".format(best_acc, test_acc.result().numpy()))
             best_acc = test_acc.result().numpy()
             if weight_name is None:
                 weight_name = 'best_param'
@@ -154,7 +155,8 @@ def training_mixup(model, train_ds, test_ds, loss, optimizer, n_epochs, batch_si
         for inputs, labels in test_ds:
             test_step(model, inputs, labels)
         
-        if output_best_weights and  best_acc < test_acc.result().numpy():
+        if output_best_weights and best_acc < test_acc.result().numpy():
+            print("test_acc is improved {:.3f} to {:.3f}".format(best_acc, test_acc.result().numpy()))
             best_acc = test_acc.result().numpy()
             if weight_name is None:
                 weight_name = 'best_param'

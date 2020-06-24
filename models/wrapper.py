@@ -1,4 +1,5 @@
 import tensorflow as tf
+from models.efficientnet.tfkeras import *
 
 tfk = tf.keras
 
@@ -48,9 +49,7 @@ def DenseNet201(**kwargs):
     return tfk.applications.DenseNet121(**kwargs)
 
 # EfficientNet
-
-def EfficientNetB0(**kwargs):
-    ...
+# models.efficientnet.tfkerasのものをそのまま使う
 
 # Mixed
 
