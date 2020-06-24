@@ -278,7 +278,7 @@ def training_supCon(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
                 loss = train_step(images, labels)
                 epoch_loss_avg.update_state(loss)
 
-                # TODO loss が nan になることがある
+                # loss が nan になることがある -> おそらく改善した
                 if tf.math.is_nan(loss):
                     print("loss", loss)
                     print("encoder_r output is nan:", tf.reduce_any(tf.math.is_nan(encoder_r(images))).numpy())
@@ -332,10 +332,15 @@ def training_simCRL(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
     **kwargs
         encoder_opt: 
         encoder_epochs:
+        encoder_dataset: labelは使わないが入れておかないと動きません．
     """
 
     encoder_opt = kwargs.get("encoder_opt", None)
     encoder_epochs = kwargs.get("encoder_epochs", 10)
+    encoder_dataset = kwargs.get("encoder_dataset", train_ds)
+
+    print("encoder dataset size:   ", sum(1 for _ in encoder_dataset.unbatch()))
+    print("classifier dataset size:", sum(1 for _ in train_ds.unbatch()))
 
     def training_SimCLR_Encoder(encoder_model=None, train_ds=None, optimizer=None, n_epochs=20):
         """
@@ -391,18 +396,6 @@ def training_simCRL(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
 
         # Build the augmentation pipeline
         data_augmentation = tfk.Sequential([tfk.layers.Lambda(CustomAugment())])
-        # # TODO 画像拡張の確認
-        # import matplotlib.pyplot as plt
-        # images, labels = next(iter(train_ds))
-        # aug_images = data_augmentation(images)
-        # for img_idx in range(5):
-        #     print(labels[img_idx])
-        #     ax1 = plt.subplot(1, 2, 1)
-        #     ax2 = plt.subplot(1, 2, 2)
-        #     ax1.imshow(images[img_idx])
-        #     ax2.imshow(aug_images[img_idx])
-        #     plt.show()
-        # sys.exit()
 
         # Architecture utils
         def get_simclr_model(base: tfk.Model, hidden_1=256, hidden_2=128, hidden_3=50):
@@ -510,7 +503,7 @@ def training_simCRL(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
         hist = {"'nt_xentloss'": epoch_wise_loss}
         return simclr_model, hist
 
-    simclr_model, hist_nt_xentloss = training_SimCLR_Encoder(encoder_model=encoder_model, optimizer=encoder_opt, train_ds=train_ds, n_epochs=encoder_epochs)
+    simclr_model, hist_nt_xentloss = training_SimCLR_Encoder(encoder_model=encoder_model, optimizer=encoder_opt, train_ds=encoder_dataset, n_epochs=encoder_epochs)
 
     # return hist_nt_xentloss
 
@@ -535,8 +528,7 @@ def training_simCRL(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs,
     linear_model = supervised_model(projection, n_classes)
 
     # Training
-    # TODO train_ds.take(5):の部分　訓練データの量をどうするか
-    hist = training(linear_model, train_ds.take(5), test_ds, loss, optimizer, n_epochs, batch_size, weight_name=weight_name)
+    hist = training(linear_model, train_ds, test_ds, loss, optimizer, n_epochs, batch_size, weight_name=weight_name)
 
     return hist
 
