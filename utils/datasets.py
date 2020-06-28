@@ -74,8 +74,8 @@ def load_data(directory, classes=('Normal', 'Nude', 'Swimwear'), size=512, cache
         raise FileNotFoundError(str(directory))
 
     classes = tuple(map(lambda x: str.upper(x), classes))
-    if not (set(classes) < set(['NORMAL', 'NUDE', 'SWIMWEAR', 'MINOR'])):
-        raise ValueError('Included unknown class names')
+    # if not (set(classes) < set(['NORMAL', 'NUDE', 'SWIMWEAR', 'MINOR'])):
+    #     raise ValueError('Included unknown class names')
 
     if cache_path is not None:
         if type(cache_path) is str: cache_path = Path(cache_path)
