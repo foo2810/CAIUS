@@ -28,8 +28,8 @@ lr = 0.001
 # Dataset
 print('[Dataset]')
 with time_counter():
-    # x, y, _ = load_data('data/dataset/', classes=['normal', 'nude', 'swimwear'], size=128, cache_path='data/data_cache/dataset_size128_autopad.pkl', auto_pad_val=True)
-    x, y = np.random.randn(60, 128, 128, 3), np.random.randint(0, 3, 60)
+    x, y, _ = load_data('data/dataset/', classes=['normal', 'nude', 'swimwear'], size=128, cache_path='data/data_cache/dataset_size128_autopad.pkl', auto_pad_val=True)
+    # x, y = np.random.randn(60, 128, 128, 3), np.random.randint(0, 3, 60)
     x_train, x_test, y_train, y_test = train_test_split(x, y, train_rate=0.5)
     n_train = len(x_train)
     train_ds = tf.data.Dataset.from_tensor_slices((x_train, y_train)).shuffle(n_train).batch(batch_size)
@@ -131,6 +131,10 @@ def training_SeLa(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs, b
 
                 return L
 
+            @tf.function
+            def calc_model(model, data):
+                return tfk.activations.softmax(model(data), 1)
+            
             def cpu_sk(model, pseudo_train_ds, L, outs, hc=1, K=3, dtype=np.float64):
                 """ Sinkhorn Knopp optimization on CPU
                     * stores activations to RAM
@@ -153,7 +157,7 @@ def training_SeLa(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs, b
                 for batch_idx, ((data, _), _selected) in enumerate(pseudo_train_ds):
                     mass = data.shape[0]
                     if hc == 1:
-                        p = tfk.activations.softmax(model(data), 1)
+                        p = calc_model(model, data)
                         PS[_selected, :] = p.numpy().astype(dtype)
                     else:
                         p = model(data)
@@ -224,7 +228,7 @@ def training_SeLa(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs, b
         def optimize_epoch(model, optimizer, train_ds, epoch, optimize_times, L, hc, ncl, outs, validation=False):
             print(f"Starting epoch {epoch}, validation: {validation} " + "="*30, flush=True)
 
-            loss_value =tfk.metrics.Mean()
+            loss_value = tfk.metrics.Mean()
             # house keeping
             # XE = torch.nn.CrossEntropyLoss()
             XE = tfk.losses.SparseCategoricalCrossentropy()
@@ -234,14 +238,13 @@ def training_SeLa(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs, b
                 niter = epoch * train_ds_batch_num + iter
                 batch_size = data.shape[0]
 
-                print("\t", L)
                 if (niter * batch_size) >= optimize_times[-1]:
                     ############ optimize labels #########################################
                     # model.headcount = 1
                     print('Optimizaton starting', flush=True)
                     _ = optimize_times.pop()
                     L = optimize_labels(L, model, train_ds, outs, hc, K=ncl) # TODO update psudo labels
-                print("\t", L)
+                    print("\t", L)
 
                 loss = train_step(data, selected, model, optimizer, XE, L, hc=hc)
                 loss_value.update_state(loss)
@@ -327,10 +330,6 @@ def training_SeLa(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs, b
     # SeLa use Dataset with image index too
     train_size = sum(1 for _ in train_ds.unbatch())
     train_ds_with_index = tf.data.Dataset.zip( (train_ds.unbatch(), tf.data.Dataset.range(train_size)) ).batch(batch_size)
-    # for i, ((data, label), selected) in enumerate(train_ds_with_index):
-    #     print(data.shape, label.shape, selected.shape)
-    #     print(data.shape, label, selected)
-    #     if i > 1: sys.exit()
 
     SeLa_model, hist_sela = training_SeLa_Encoder(encoder_model, train_ds_with_index, n_epochs=encoder_epochs, n_classes=n_classes*2)
 
@@ -370,11 +369,6 @@ def training_SeLa(encoder_model, train_ds, test_ds, loss, optimizer, n_epochs, b
 
 # Model
 model = ResNet50(weights=None, include_top=False)
-# inputs = tfk.Input((128, 128, 3))
-# res = ResNet50(weights=None, include_top=True, input_shape=(128, 128, 3))(inputs)
-# outputs = tfk.layers.Dense(n_classes, activation='softmax')(res)
-# model = tfk.Model(inputs, outputs)
-# model.summary()
 
 # Loss
 loss = tfk.losses.CategoricalCrossentropy()
@@ -387,7 +381,7 @@ opt = tfk.optimizers.Adam(lr)
 hist = training_SeLa(model, train_ds, test_ds, loss, opt, n_epochs, batch_size,
                         n_classes, output_best_weights=False, #weight_name=str(result_path / 'best_param'),
                         encoder_epochs=1)
-print(hist)
+print(pd.DataFrame(hist))
 
 # hist_file_path = str(result_path / 'history.csv')
 # pd.DataFrame(hist).to_csv(hist_file_path)
